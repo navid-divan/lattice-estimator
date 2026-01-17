@@ -74,16 +74,17 @@ def CN11(d, n, q, beta, xi=1, tau=1, dual=False, ignore_qary=False):
 
     """
     return _CN11_cached(d, n, q, beta, xi, tau, dual, ignore_qary)
-
 @cached_function  
 def _CN11_cached(d, n, q, beta, xi, tau, dual, ignore_qary):
     from fpylll import BKZ
     from fpylll.tools.bkz_simulator import simulate
 
-    def f(r, beta):
-        return simulate(r, BKZ.EasyParam(beta))[0]
+    max_loops = max(8, min(2 * beta, d))  # 2β tours are sufficient, and consider 8 as a practical minimum to avoid under-running small-β cases
 
-    return tuple(qary_simulator(f=f, d=d, n=n, q=q, beta=beta, xi=xi, tau=tau, dual=dual, ignore_qary=ignore_qary))
+    def f(r, beta):
+        return simulate(r, BKZ.EasyParam(beta, max_loops=max_loops))[0]
+
+    return qary_simulator(f=f, d=d, n=n, q=q, beta=beta, xi=xi, tau=tau, dual=dual, ignore_qary=ignore_qary)
 
 
 CN11_NQ = partial(CN11, ignore_qary=True)
