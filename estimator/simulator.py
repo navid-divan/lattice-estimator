@@ -73,16 +73,17 @@ def CN11(d, n, q, beta, xi=1, tau=1, dual=False, ignore_qary=False):
     :returns: squared Gram-Schmidt norms
 
     """
+    return _CN11_cached(d, n, q, beta, xi, tau, dual, ignore_qary)
 
+@cached_function  
+def _CN11_cached(d, n, q, beta, xi, tau, dual, ignore_qary):
     from fpylll import BKZ
     from fpylll.tools.bkz_simulator import simulate
-
-    assert 2 <= beta <= d
 
     def f(r, beta):
         return simulate(r, BKZ.EasyParam(beta))[0]
 
-    return qary_simulator(f=f, d=d, n=n, q=q, beta=beta, xi=xi, tau=tau, dual=dual, ignore_qary=ignore_qary)
+    return tuple(qary_simulator(f=f, d=d, n=n, q=q, beta=beta, xi=xi, tau=tau, dual=dual, ignore_qary=ignore_qary))
 
 
 CN11_NQ = partial(CN11, ignore_qary=True)
