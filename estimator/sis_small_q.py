@@ -33,6 +33,10 @@ def log2_lift_proportion_exact(n_q, sq_radius, q):
     [C:DucEspPos23]_ Sect. 3.3. It is a slow reference, of cost ``O(n_q · sq_radius · q)``, against
     which :func:`log2_lift_proportion` is validated; the latter should be preferred in practice.
 
+    Both parities of ``q`` are handled: the centred representatives are ``{-(q-1)/2, ..., (q-1)/2}``
+    for odd ``q`` and the non-symmetric ``{-(q-2)/2, ..., q/2}`` for even ``q`` ([C:DucEspPos23]_
+    Def. 16, the latter being the case its footnote 3 sets aside).
+
     :param n_q: number of (uniform mod q) lifted coordinates.
     :param sq_radius: squared radius of the ball.
     :param q: the modulus.
@@ -48,16 +52,18 @@ def log2_lift_proportion_exact(n_q, sq_radius, q):
 
     if sq_radius < 0:
         return RR(-oo)
-    half = (q - 1) // 2
-    max_sq = n_q * half ** 2
-    D = min(int(floor(sq_radius)), max_sq)
-    if D >= max_sq:
+    # the longest lift has every coordinate at the cube's outer edge, of magnitude q // 2
+    max_sq = n_q * (q // 2) ** 2
+    if sq_radius >= max_sq:
         # the whole cube lies inside the ball, every lift is short enough
         return RR(0)
 
-    # squared-length distribution of one centred coordinate uniform mod q, truncated beyond X^D
+    # squared-length distribution of one centred coordinate uniform mod q, truncated beyond X^D. The
+    # range gives the q centred representatives for both parities: symmetric for odd q, and the
+    # non-symmetric {-(q-2)/2, ..., q/2} for even q ([C:DucEspPos23]_ Def. 16).
+    D = int(floor(sq_radius))
     dist = np.zeros(D + 1)
-    for u in range(-half, q // 2 + 1):
+    for u in range(-((q - 1) // 2), q // 2 + 1):
         s = u * u
         if s <= D:
             dist[s] += 1.0 / q
@@ -82,12 +88,16 @@ def log2_lift_proportion(n_q, sq_radius, q):
 
     ``Cube_{n_q}(q)`` is a centred set of representatives of ``(ZZ/qZZ)^{n_q}`` and the proportion of
     it inside the ball of squared radius ``sq_radius`` is the success probability of a single lift
-    [C:DucEspPos23]_ Eq. 2. Rather than counting integer points directly as in
-    :func:`log2_lift_proportion_exact`, we use a saddle-point (Bahadur-Rao) approximation: a
-    coordinate uniform mod q is modelled as uniform on ``[-q/2, q/2]``, whose cumulant generating
-    function ``K(t) = log E[e^{t U^2}]`` is closed form, so the estimate costs ``O(1)`` rather than
-    ``O(q)`` and is accurate in the relevant tail (see the example below). Above the mean cube length
-    the lifting is not the bottleneck and the proportion is one.
+    [C:DucEspPos23]_ Eq. 2. Rather than counting integer points directly, as in
+    :func:`log2_lift_proportion_exact`, we apply the saddle-point (Bahadur-Rao) sharp large-deviation
+    approximation [BahRao60]_ to the lower tail of the squared lift length. A single lifted coordinate
+    is modelled by a random variable ``U`` continuous and uniform on ``[-q/2, q/2]`` -- giving each of
+    the ``q`` integer representatives a unit-width tile, so the support has measure ``q`` and the same
+    second moment up to ``O(1/q^2)`` for both parities of ``q``. The squared length ``U^2`` then has
+    the closed-form cumulant generating function ``K(t) = log E[e^{t U^2}]``, so the estimate costs
+    ``O(1)`` rather than the ``O(q)`` of the direct count and is accurate in the relevant (lower) tail
+    (see the example below). The combination is, to our knowledge, not used elsewhere for this count,
+    so the agreement with :func:`log2_lift_proportion_exact` is the warrant for correctness.
 
     :param n_q: number of (uniform mod q) lifted coordinates.
     :param sq_radius: squared radius of the ball.
@@ -105,7 +115,9 @@ def log2_lift_proportion(n_q, sq_radius, q):
     a = float(sq_radius)
     h = q / 2.0  # a lifted coordinate is modelled as uniform on [-q/2, q/2], with E[U^2] = h^2 / 3
     if a >= n_q * h ** 2 / 3:
-        # the ball reaches past the mean cube length, so the lifting is not the bottleneck
+        # past the mean cube length the saddle-point's lower-tail regime ends; the proportion is ≥ 1/2
+        # there and we round it up to 1, which is conservative and does not move the optimum, since the
+        # number of lifts then saturates the per-attempt success probability (validated, see tests)
         return RR(0)
     if a < 1:
         # only the zero vector of the cube lies in the ball
