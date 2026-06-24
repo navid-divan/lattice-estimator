@@ -162,6 +162,7 @@ class SISSmallQ:
         success_probability: float = 0.99,
         red_shape_model="ZGSA",
         red_cost_model=red_cost_model_default,
+        exact: bool = False,
         log_level=None,
         **kwds,
     ):
@@ -180,6 +181,8 @@ class SISSmallQ:
         :param success_probability: targeted success probability.
         :param red_shape_model: how to model the shape of a reduced basis; must expose the q-vectors.
         :param red_cost_model: how to cost lattice reduction.
+        :param exact: count the short lifts with the slow exact :func:`log2_lift_proportion_exact`
+            instead of the fast saddle-point :func:`log2_lift_proportion` (default).
 
         """
         d = params.m
@@ -201,6 +204,9 @@ class SISSmallQ:
         # the sieve runs in the projected sublattice Λ_{[ℓ:s]}, ℓ = n_q + 1 and s = min(ℓ+β, d+1)
         sieve_dim = min(beta, d - n_q)
 
+        # the fast saddle-point count by default; the slow exact count when opted in
+        lift_proportion = log2_lift_proportion_exact if exact else log2_lift_proportion
+
         # expected number of solutions from one sieve over the two lifting strategies; for each the
         # projected vectors have length ``proj_length`` and there are ``2^(log2_density ⋅ sieve_dim)``
         log2_solutions = None
@@ -213,7 +219,7 @@ class SISSmallQ:
                 continue
             # squared lifting radius: the lifted entries must absorb the remaining length, Eq. 2
             sq_radius = floor(RR(params.length_bound) ** 2 - proj_length ** 2)
-            log2_p = log2_density * sieve_dim + log2_lift_proportion(n_q, sq_radius, params.q)
+            log2_p = log2_density * sieve_dim + lift_proportion(n_q, sq_radius, params.q)
             log2_solutions = log2_p if log2_solutions is None else max(log2_solutions, log2_p)
 
         if log2_solutions is None:
@@ -255,6 +261,7 @@ class SISSmallQ:
         params: SISParameters,
         red_shape_model="ZGSA",
         red_cost_model=red_cost_model_default,
+        exact: bool = False,
         log_level=1,
         **kwds,
     ):
@@ -264,6 +271,9 @@ class SISSmallQ:
         :param params: SIS parameters.
         :param red_shape_model: how to model the shape of a reduced basis; must expose the q-vectors.
         :param red_cost_model: how to cost lattice reduction.
+        :param exact: count the short lifts with the slow exact :func:`log2_lift_proportion_exact`
+            instead of the fast saddle-point :func:`log2_lift_proportion` (default). This is much
+            slower but removes the approximation, for when one wants certainty and can wait.
         :return: A cost dictionary.
 
         The returned cost dictionary has the following entries:
@@ -283,6 +293,12 @@ class SISSmallQ:
             >>> from estimator import *
             >>> params = SIS.Parameters(n=150, q=257, length_bound=420, m=300, norm=2)
             >>> SIS.small_q(params)
+            rop: ≈2^46.6, red: ≈2^46.6, sieve: ≈2^40.3, β: 59, η: 59, ℓ: 32, d: 300, prob: 1, ↻: 1, tag: small_q
+
+        Setting ``exact`` replaces the fast saddle-point count by the slow exact one; it is much
+        slower but here confirms the default::
+
+            >>> SIS.small_q(params, exact=True)
             rop: ≈2^46.6, red: ≈2^46.6, sieve: ≈2^40.3, β: 59, η: 59, ℓ: 32, d: 300, prob: 1, ↻: 1, tag: small_q
 
         The attack only targets the regime where the length bound exceeds the modulus and the
@@ -309,6 +325,7 @@ class SISSmallQ:
             params=params,
             red_shape_model=red_shape_model,
             red_cost_model=red_cost_model,
+            exact=exact,
         )
 
         with local_minimum(40, min(params.m, max_beta), precision=2, log_level=log_level) as it:
