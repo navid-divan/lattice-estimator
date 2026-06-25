@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Estimate cost of solving SIS with a small modulus via lattice reduction [C:DucEspPos23]_.
+Estimate cost of the lifting attack on q-ary lattices [C:DucEspPos23]_ (the small modulus regime).
 
 See :ref:`SIS Lattice Attacks` for an introduction to what is available.
 
@@ -149,9 +149,9 @@ def log2_lift_proportion(n_q, sq_radius, q):
     return RR(min(0.0, ln_p) / mlog(2))
 
 
-class SISSmallQ:
+class SISLatticeLift:
     """
-    Estimate cost of solving SIS with a small modulus via lattice reduction [C:DucEspPos23]_.
+    Estimate cost of the lifting attack on q-ary lattices [C:DucEspPos23]_ (the small modulus regime).
     """
 
     @staticmethod
@@ -167,7 +167,7 @@ class SISSmallQ:
         **kwds,
     ):
         """
-        Cost of the small-q attack [C:DucEspPos23]_ for a fixed block size β.
+        Cost of the lifting attack on q-ary lattices [C:DucEspPos23]_ for a fixed block size β.
 
         The attack reduces a basis of the kernel lattice ``Λ_q^⊥(A)``, which exhibits a "Z-shape":
         a head of ``n_q`` vectors of length ``q``, a sloped middle and a flat tail. Sieving in the
@@ -266,7 +266,7 @@ class SISSmallQ:
         **kwds,
     ):
         """
-        Estimate the cost of solving SIS with a small modulus via lattice reduction [C:DucEspPos23]_.
+        Estimate the cost of the lifting attack on q-ary lattices [C:DucEspPos23]_.
 
         :param params: SIS parameters.
         :param red_shape_model: how to model the shape of a reduced basis; must expose the q-vectors.
@@ -292,36 +292,36 @@ class SISSmallQ:
 
             >>> from estimator import *
             >>> params = SIS.Parameters(n=150, q=257, length_bound=420, m=300, norm=2)
-            >>> SIS.small_q(params)
-            rop: ≈2^46.6, red: ≈2^46.6, sieve: ≈2^40.3, β: 59, η: 59, ℓ: 32, d: 300, prob: 1, ↻: 1, tag: small_q
+            >>> SIS.lattice_lift(params)
+            rop: ≈2^46.6, red: ≈2^46.6, sieve: ≈2^40.3, β: 59, η: 59, ℓ: 32, d: 300, prob: 1, ↻: 1, tag: lattice_lift
 
         Setting ``exact`` replaces the fast saddle-point count by the slow exact one; it is much
         slower but here confirms the default::
 
-            >>> SIS.small_q(params, exact=True)
-            rop: ≈2^46.6, red: ≈2^46.6, sieve: ≈2^40.3, β: 59, η: 59, ℓ: 32, d: 300, prob: 1, ↻: 1, tag: small_q
+            >>> SIS.lattice_lift(params, exact=True)
+            rop: ≈2^46.6, red: ≈2^46.6, sieve: ≈2^40.3, β: 59, η: 59, ℓ: 32, d: 300, prob: 1, ↻: 1, tag: lattice_lift
 
         The attack only targets the regime where the length bound exceeds the modulus and the
         euclidean norm is used; outside of it ``rop`` is infinite::
 
-            >>> SIS.small_q(params.updated(length_bound=200))
-            rop: ≈2^inf, tag: small_q
+            >>> SIS.lattice_lift(params.updated(length_bound=200))
+            rop: ≈2^inf, tag: lattice_lift
 
         """
         if params.norm != 2:
             raise NotImplementedError(
-                "The small-q attack is only available for the euclidean norm."
+                "The lifting attack on q-ary lattices is only available for the euclidean norm."
             )
 
         # the attack targets the regime where the length bound exceeds the modulus [C:DucEspPos23]_
         if params.length_bound <= params.q:
             cost = Cost(rop=oo)
-            cost["tag"] = "small_q"
+            cost["tag"] = "lattice_lift"
             cost["problem"] = params
             return cost
 
         f = partial(
-            SISSmallQ.cost,
+            SISLatticeLift.cost,
             params=params,
             red_shape_model=red_shape_model,
             red_cost_model=red_cost_model,
@@ -338,13 +338,13 @@ class SISSmallQ:
         if cost is None:
             cost = Cost(rop=oo)
 
-        Logging.log("sis_small_q", log_level, f"{cost!r}")
+        Logging.log("lattice_lift", log_level, f"{cost!r}")
 
-        cost["tag"] = "small_q"
+        cost["tag"] = "lattice_lift"
         cost["problem"] = params
         return cost.sanity_check()
 
-    __name__ = "small_q"
+    __name__ = "lattice_lift"
 
 
-small_q = SISSmallQ()
+lattice_lift = SISLatticeLift()
