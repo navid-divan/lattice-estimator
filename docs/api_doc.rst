@@ -21,7 +21,7 @@ API Reference
    estimator.ntru_primal
    estimator.ntru
    estimator.sis_lattice
-   estimator.sis_big_beta
+   estimator.sis_large_norm
    estimator.sis
    estimator.gb
    estimator.nd
